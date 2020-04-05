@@ -22,13 +22,10 @@ INFO_TYPES = [
 ]
 
 
-PROJECT_ID = 'data-protection-01'
-# PUB_SUB_TOPIC = 'projects/data-protection-01/topics/dlp-result-topic-cust01'
-
-PUB_SUB_TOPIC = 'dlp-result-topic-cust01'
-STAGING_BUCKET = 'dlp-quarantine-bucket-cust01'
-MIN_LIKELIHOOD = 'POSSIBLE'
-MAX_FINDINGS = 0
+PROJECT_ID = os.environ.get('PROJECT_ID')
+DLP_ACTION_TOPIC = os.environ.get('DLP_ACTION_TOPIC')
+MIN_LIKELIHOOD = os.environ.get('MIN_LIKELIHOOD')
+MAX_FINDINGS = int(os.environ.get('MAX_FINDINGS'))
 
 def sub(subscription_name):
     """Receives messages from a Pub/Sub subscription."""
@@ -38,8 +35,8 @@ def sub(subscription_name):
     # [END pubsub_quickstart_sub_client]
     # Create a fully qualified identifier in the form of
     # `projects/{project_id}/subscriptions/{subscription_name}`
-    # subscription_path = client.subscription_path(project_id, subscription_name)
-    subscription_path = subscription_name
+    subscription_path = client.subscription_path(PROJECT_ID, subscription_name)
+    # subscription_path = subscription_name
 
     def callback(message):
         print(
@@ -83,7 +80,8 @@ def create_DLP_job(data):
 
   # Get the targeted file in the quarantine bucket
 
-  file_name = data['name']
+  file_name = data['objectId']
+  staging_bucket = data['bucketId']
   print('Function triggered for file [{}]'.format(file_name))
 
   # Prepare info_types by converting the list of strings (INFO_TYPES) into a list of dictionaries
@@ -106,7 +104,7 @@ def create_DLP_job(data):
               'file_set': {
                   'url':
                       'gs://{bucket_name}/{file_name}'.format(
-                          bucket_name=STAGING_BUCKET, file_name=file_name)
+                          bucket_name=staging_bucket, file_name=file_name)
               }
           }
       },
@@ -114,7 +112,7 @@ def create_DLP_job(data):
           'pub_sub': {
               'topic':
                   'projects/{project_id}/topics/{topic_id}'.format(
-                      project_id=PROJECT_ID, topic_id=PUB_SUB_TOPIC)
+                      project_id=PROJECT_ID, topic_id=DLP_ACTION_TOPIC)
           }
       }]
   }
